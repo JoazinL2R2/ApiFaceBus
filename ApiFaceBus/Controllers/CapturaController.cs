@@ -1,8 +1,9 @@
+using ApiFaceBus.Models;
 using Microsoft.AspNetCore.Mvc;
-using System.IO;
+using Microsoft.Data.Sqlite;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Jpeg;
-using Microsoft.Data.Sqlite;
+using System.IO;
 
 namespace CapturaAPI.Controllers
 {
@@ -11,9 +12,9 @@ namespace CapturaAPI.Controllers
     public class CapturaController : ControllerBase
     {
         [HttpPost("capturar-e-salvar")]
-        public async Task<IActionResult> CapturarESalvarImagem([FromForm] IFormFile imagem, [FromForm] string nome)
+        public async Task<IActionResult> CapturarESalvarImagem([FromForm] UploadRequest request)
         {
-            if (imagem == null || imagem.Length == 0)
+            if (request.Imagem == null || request.Imagem.Length == 0)
             {
                 return BadRequest("Nenhuma imagem foi enviada.");
             }
@@ -23,21 +24,20 @@ namespace CapturaAPI.Controllers
                 byte[] imageBytes;
                 using (var ms = new MemoryStream())
                 {
-                    await imagem.CopyToAsync(ms);
+                    await request.Imagem.CopyToAsync(ms);
                     imageBytes = ms.ToArray();
                 }
 
-                // (opcional) pode validar se realmente é uma imagem
                 using (var image = Image.Load(imageBytes))
                 {
-                    // Apenas para garantir que é uma imagem válida
+                    // validação da imagem
                 }
 
-                using (var connection = new SqliteConnection("Data Source=meubanco.db"))
+                using (var connection = new SqliteConnection("Data Source=database.db"))
                 {
                     connection.Open();
-                    var command = new SqliteCommand("INSERT INTO Usuarios (Nome, Face) VALUES (@nome, @face)", connection);
-                    command.Parameters.AddWithValue("@nome", nome);
+                    var command = new SqliteCommand("INSERT INTO faces (name, image) VALUES (@nome, @face)", connection);
+                    command.Parameters.AddWithValue("@nome", request.Nome);
                     command.Parameters.AddWithValue("@face", imageBytes);
                     command.ExecuteNonQuery();
                 }
